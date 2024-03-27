@@ -1,0 +1,27 @@
+import pandas as pd
+import numpy as np
+from sklearn.feature_selection import VarianceThreshold
+from sklearn.preprocessing import LabelEncoder
+
+data = pd.read_csv('Train.csv')
+
+missing_values_ratio = data.isnull().mean()
+columns_to_drop = missing_values_ratio[missing_values_ratio > 0.2].index
+data.drop(columns_to_drop, axis=1, inplace=True)
+
+categorical_columns = data.select_dtypes(include=['object']).columns
+label_encoders = {}
+for column in categorical_columns:
+    label_encoders[column] = LabelEncoder()
+    data[column] = label_encoders[column].fit_transform(data[column])
+
+selector = VarianceThreshold(threshold=0.05) 
+selector.fit(data)
+low_variance_columns = data.columns[~selector.get_support()]
+data.drop(low_variance_columns, axis=1, inplace=True)
+
+correlation_matrix = data.corr().abs()
+upper_triangular = correlation_matrix.where(np.triu(np.ones(correlation_matrix.shape), k=1).astype(bool))
+high_correlation_columns = [column for column in upper_triangular.columns if any(upper_triangular[column] > 0.8)]
+data.drop(high_correlation_columns, axis=1, inplace=True)
+
